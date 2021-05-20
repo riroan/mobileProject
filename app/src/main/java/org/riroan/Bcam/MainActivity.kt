@@ -2,32 +2,40 @@ package org.riroan.Bcam
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Matrix
 import android.icu.text.SimpleDateFormat
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.Surface
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageCapture
-import androidx.camera.core.ImageCaptureException
-import androidx.camera.core.Preview
+import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import kotlinx.android.synthetic.main.activity_main.*
+import org.opencv.android.OpenCVLoader
+import org.riroan.Bcam.filter.EdgeAnalyzer
 import java.io.File
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-typealias LumaListener = (luma: Double) -> Unit
-
 class MainActivity : AppCompatActivity() {
-    private var imageCapture: ImageCapture? = null
 
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var cameraSelector: CameraSelector
+    private lateinit var viewFinder: PreviewView
+    private lateinit var imageView:ImageView
+
+    private var preview: Preview? = null
+    private var imageCapture: ImageCapture? = null
+    private var imageAnalysis: ImageAnalysis? = null
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -50,6 +58,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        imageView = findViewById(R.id.overlay)
+        viewFinder = findViewById(R.id.viewFinder)
 
         // Request camera permissions
         if (allPermissionsGranted()) {
@@ -78,8 +89,10 @@ class MainActivity : AppCompatActivity() {
         // 파일생성
         val photoFile = File(
             outputDirectory,
-            SimpleDateFormat(FILENAME_FORMAT, Locale.US
-            ).format(System.currentTimeMillis()) + ".jpg")
+            SimpleDateFormat(
+                FILENAME_FORMAT, Locale.US
+            ).format(System.currentTimeMillis()) + ".jpg"
+        )
 
         // Create output options object which contains file + metadata
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
@@ -87,7 +100,9 @@ class MainActivity : AppCompatActivity() {
         // Set up image capture listener, which is triggered after photo has
         // been taken
         imageCapture.takePicture(
-            outputOptions, ContextCompat.getMainExecutor(this), object : ImageCapture.OnImageSavedCallback {
+            outputOptions,
+            ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
                 }
@@ -109,32 +124,84 @@ class MainActivity : AppCompatActivity() {
             // Used to bind the lifecycle of cameras to the lifecycle owner
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
-            // Preview
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(viewFinder.surfaceProvider)
-                }
 
-            imageCapture = ImageCapture.Builder()
-                .build()
+            preview = setPreview()
+            imageCapture = setImageCapture()
+            imageAnalysis = setImageAnalysis()
 
-            // Select back camera as a default
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            // 후면 카메라
+            cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            //cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
 
             try {
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
 
                 // Bind use cases to camera
+                // 카메라가 앱의 라이프사이클을 따라감
                 cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview)
+                    this as LifecycleOwner, cameraSelector, imageAnalysis, preview
+                )
 
-            } catch(exc: Exception) {
+            } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
 
+
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun setImageAnalysis(): ImageAnalysis {
+        val imageAnalysis = ImageAnalysis.Builder()
+            .build()
+
+        // 만든 필터 실행하고 싶을 때 EdgeAnalyzer 대신에 넣으면 됩니다.
+
+        imageAnalysis.setAnalyzer(cameraExecutor, EdgeAnalyzer(this){ luma->
+            runOnUiThread {
+                imageView.setImageBitmap(luma)
+            }
+        })
+
+        return imageAnalysis
+    }
+
+    private fun setImageCapture(): ImageCapture {
+        return ImageCapture.Builder()
+            .build()
+    }
+
+    private fun setPreview(): Preview {
+        // 사진 찍기전 보이는 화면
+        var preview = Preview.Builder()
+            .build()
+            .also {
+                it.setSurfaceProvider(viewFinder.surfaceProvider)
+            }
+
+        return preview
+    }
+
+    private fun updateTransform() {
+        val matrix = Matrix()
+
+        // 뷰파인더의 중심을 계산합니다.
+        val centerX = viewFinder.width / 2f
+        val centerY = viewFinder.height / 2f
+
+        // 화면 회전을 위한 회전각도를 출력합니다
+        val rotationDegrees = when(viewFinder.display.rotation) {
+            Surface.ROTATION_0 -> 0
+            Surface.ROTATION_90 -> 90
+            Surface.ROTATION_180 -> 180
+            Surface.ROTATION_270 -> 270
+            else -> return
+        }
+        matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
+
+        // 마침내 뷰파인더의 방향이 알맞게 나타납니다.
+        //viewFinder.setTransform(matrix)
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
@@ -161,5 +228,12 @@ class MainActivity : AppCompatActivity() {
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+
+        init {
+            if (!OpenCVLoader.initDebug()) Log.d(
+                "ERROR",
+                "Unable to load OpenCV"
+            ) else Log.d("SUCCESS", "OpenCV loaded")
+        }
     }
 }
