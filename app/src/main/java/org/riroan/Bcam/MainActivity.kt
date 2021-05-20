@@ -2,12 +2,10 @@ package org.riroan.Bcam
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Matrix
 import android.icu.text.SimpleDateFormat
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.view.Surface
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -181,27 +179,6 @@ class MainActivity : AppCompatActivity() {
             }
 
         return preview
-    }
-
-    private fun updateTransform() {
-        val matrix = Matrix()
-
-        // 뷰파인더의 중심을 계산합니다.
-        val centerX = viewFinder.width / 2f
-        val centerY = viewFinder.height / 2f
-
-        // 화면 회전을 위한 회전각도를 출력합니다
-        val rotationDegrees = when(viewFinder.display.rotation) {
-            Surface.ROTATION_0 -> 0
-            Surface.ROTATION_90 -> 90
-            Surface.ROTATION_180 -> 180
-            Surface.ROTATION_270 -> 270
-            else -> return
-        }
-        matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
-
-        // 마침내 뷰파인더의 방향이 알맞게 나타납니다.
-        //viewFinder.setTransform(matrix)
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
