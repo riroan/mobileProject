@@ -1,58 +1,6 @@
-# Prerequisites
-*.d
 
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
-
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
-
-# Created by https://www.toptal.com/developers/gitignore/api/kotlin,androidstudio,android
-# Edit at https://www.toptal.com/developers/gitignore?templates=kotlin,androidstudio,android
+# Created by https://www.toptal.com/developers/gitignore/api/android,androidstudio,kotlin
+# Edit at https://www.toptal.com/developers/gitignore?templates=android,androidstudio,kotlin
 
 ### Android ###
 # Built application files
@@ -283,4 +231,4 @@ fabric.properties
 
 !/gradle/wrapper/gradle-wrapper.jar
 
-# End of https://www.toptal.com/developers/gitignore/api/kotlin,androidstudio,android
+# End of https://www.toptal.com/developers/gitignore/api/android,androidstudio,kotlin
