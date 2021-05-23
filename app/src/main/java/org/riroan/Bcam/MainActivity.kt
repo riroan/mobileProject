@@ -18,6 +18,7 @@ import androidx.lifecycle.LifecycleOwner
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.OpenCVLoader
 import org.riroan.Bcam.filter.EdgeAnalyzer
+import org.riroan.Bcam.filter.NoAnalyzer
 import java.io.File
 import java.util.*
 import java.util.concurrent.ExecutorService
@@ -29,11 +30,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var cameraSelector: CameraSelector
     private lateinit var viewFinder: PreviewView
-    private lateinit var imageView:ImageView
+    private lateinit var imageView: ImageView
 
     private var preview: Preview? = null
     private var imageCapture: ImageCapture? = null
     private var imageAnalysis: ImageAnalysis? = null
+
+    private var filterMode = FilterMode.NO
+    private var useFrontCamera = false
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -129,8 +133,10 @@ class MainActivity : AppCompatActivity() {
 
 
             // 후면 카메라
-            cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-            //cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+            if (useFrontCamera)
+                cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+            else
+                cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
                 // Unbind use cases before rebinding
@@ -156,11 +162,19 @@ class MainActivity : AppCompatActivity() {
 
         // 만든 필터 실행하고 싶을 때 EdgeAnalyzer 대신에 넣으면 됩니다.
 
-        imageAnalysis.setAnalyzer(cameraExecutor, EdgeAnalyzer(this){ luma->
-            runOnUiThread {
-                imageView.setImageBitmap(luma)
-            }
-        })
+        if (filterMode == FilterMode.NO) {
+            imageAnalysis.setAnalyzer(cameraExecutor, NoAnalyzer(this) { luma ->
+                runOnUiThread {
+                    imageView.setImageBitmap(luma)
+                }
+            })
+        } else if (filterMode == FilterMode.SOBEL) {
+            imageAnalysis.setAnalyzer(cameraExecutor, EdgeAnalyzer(this) { luma ->
+                runOnUiThread {
+                    imageView.setImageBitmap(luma)
+                }
+            })
+        }
 
         return imageAnalysis
     }
