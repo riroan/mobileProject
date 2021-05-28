@@ -15,6 +15,9 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Bcam">
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="face" />
         <activity android:name=".MainActivity"
             android:theme="@style/FullScreenTheme">
             <intent-filter>
@@ -24,5 +27,4 @@
             </intent-filter>
         </activity>
     </application>
-
 </manifest>
