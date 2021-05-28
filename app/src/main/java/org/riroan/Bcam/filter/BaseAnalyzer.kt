@@ -4,36 +4,44 @@ import android.content.Context
 import android.graphics.*
 import android.media.Image
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
 import java.io.ByteArrayOutputStream
 
-open class BaseAnalyzer(context: Context) : ImageAnalysis.Analyzer {
+typealias bmpListener = (img: Bitmap) -> Unit
+
+abstract class BaseAnalyzer(context: Context) : ImageAnalysis.Analyzer {
     var img: Bitmap? = null
 
-    fun rotatedBitmap(bitmap: Bitmap, degree: Float): Bitmap {
-        var matrix = Matrix()
-        matrix.postRotate(degree)
-        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
-    }
-
-    fun Image.toBitmap(): Bitmap {
+    fun Image.toBitmap(quality: Int): Bitmap {
         val yBuffer = planes[0].buffer // Y
-        val vuBuffer = planes[2].buffer // VU
+        val uBuffer = planes[1].buffer // U
+        val vBuffer = planes[2].buffer // V
 
         val ySize = yBuffer.remaining()
-        val vuSize = vuBuffer.remaining()
+        val uSize = uBuffer.remaining()
+        val vSize = vBuffer.remaining()
 
-        val nv21 = ByteArray(ySize + vuSize)
+        val nv21 = ByteArray(ySize + uSize + vSize)
 
+        //U and V are swapped
         yBuffer.get(nv21, 0, ySize)
-        vuBuffer.get(nv21, ySize, vuSize)
+        vBuffer.get(nv21, ySize, vSize)
+        uBuffer.get(nv21, ySize + vSize, uSize)
 
         val yuvImage = YuvImage(nv21, ImageFormat.NV21, this.width, this.height, null)
         val out = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, yuvImage.width, yuvImage.height), 50, out)
+        yuvImage.compressToJpeg(Rect(0, 0, yuvImage.width, yuvImage.height), quality, out)
         val imageBytes = out.toByteArray()
         return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
     }
 
-    override fun analyze(image: ImageProxy) {}
+    fun Bitmap.rotateWithReverse(degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        var bitmap = Bitmap.createBitmap(this, 0, 0, width, height, matrix, true)
+
+        val m = Matrix()
+        m.preScale(-1f, 1f)
+
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, m, false)
+    }
+
 }
