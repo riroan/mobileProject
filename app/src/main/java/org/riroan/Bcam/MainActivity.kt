@@ -9,25 +9,47 @@ import android.util.Log
 import android.view.ContextMenu
 import android.view.MenuItem
 import android.view.View
+import android.view.OrientationEventListener
+import android.view.Surface
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import kotlinx.android.synthetic.main.activity_main.*
+import org.opencv.android.OpenCVLoader
+import org.riroan.Bcam.databinding.ActivityMainBinding
+import org.riroan.Bcam.filter.EdgeAnalyzer
+import org.riroan.Bcam.filter.FaceAnalyzer
+import org.riroan.Bcam.filter.NewMLAnalyzer
+import org.riroan.Bcam.filter.NoAnalyzer
 import java.io.File
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-typealias LumaListener = (luma: Double) -> Unit
-
 class MainActivity : AppCompatActivity() {
-    private var imageCapture: ImageCapture? = null
 
     private lateinit var outputDirectory: File
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var cameraSelector: CameraSelector
+    private lateinit var viewFinder: PreviewView
+    private lateinit var overlay: ImageView
+
+    private var preview: Preview? = null
+    private var imageCapture: ImageCapture? = null
+    private var imageAnalysis: ImageAnalysis? = null
+
+    private var filterMode = FilterMode.TESTML
+    private var useFrontCamera = true
+
+    private lateinit var binding: ActivityMainBinding
+
+    val rotation = Surface.ROTATION_270
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -49,7 +71,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        //imageView = findViewById(R.id.overlay)
+        viewFinder = binding.viewFinder
+        overlay = binding.overlay
 
         // Request camera permissions
         if (allPermissionsGranted()) {
@@ -118,8 +145,10 @@ class MainActivity : AppCompatActivity() {
         // 파일생성
         val photoFile = File(
             outputDirectory,
-            SimpleDateFormat(FILENAME_FORMAT, Locale.US
-            ).format(System.currentTimeMillis()) + ".jpg")
+            SimpleDateFormat(
+                FILENAME_FORMAT, Locale.US
+            ).format(System.currentTimeMillis()) + ".jpg"
+        )
 
         // Create output options object which contains file + metadata
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
@@ -127,7 +156,9 @@ class MainActivity : AppCompatActivity() {
         // Set up image capture listener, which is triggered after photo has
         // been taken
         imageCapture.takePicture(
-            outputOptions, ContextCompat.getMainExecutor(this), object : ImageCapture.OnImageSavedCallback {
+            outputOptions,
+            ContextCompat.getMainExecutor(this),
+            object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
                 }
@@ -149,32 +180,118 @@ class MainActivity : AppCompatActivity() {
             // Used to bind the lifecycle of cameras to the lifecycle owner
             val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
 
-            // Preview
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(viewFinder.surfaceProvider)
-                }
+            //preview = setPreview()
+            imageCapture = setImageCapture()
+            imageAnalysis = setImageAnalysis()
+            if (useFrontCamera)
+                cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
+            else
+                cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
-            imageCapture = ImageCapture.Builder()
-                .build()
-
-            // Select back camera as a default
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            //viewFinder.overlay.add(overlay)
 
             try {
                 // Unbind use cases before rebinding
                 cameraProvider.unbindAll()
 
                 // Bind use cases to camera
+                // 카메라가 앱의 라이프사이클을 따라감
                 cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview)
+                    this as LifecycleOwner, cameraSelector, imageAnalysis, imageCapture//, preview
+                )
 
-            } catch(exc: Exception) {
+            } catch (exc: Exception) {
                 Log.e(TAG, "Use case binding failed", exc)
             }
 
+            //preview!!.setSurfaceProvider(viewFinder.surfaceProvider)
+
         }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun setPreview(): Preview {
+        // 사진 찍기전 보이는 화면
+        val preview = Preview.Builder()
+            .setTargetRotation(rotation)
+            .build()
+
+        // 후면 카메라
+
+
+        return preview
+    }
+
+    private fun setImageAnalysis(): ImageAnalysis {
+        val imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setTargetAspectRatio(AspectRatio.RATIO_16_9)
+            .setTargetRotation(rotation)
+            .build()
+
+        // 만든 필터 실행하고 싶을 때 EdgeAnalyzer 대신에 넣으면 됩니다.
+
+        if (filterMode == FilterMode.NO) {
+            imageAnalysis.setAnalyzer(cameraExecutor, NoAnalyzer(this) { img ->
+                runOnUiThread {
+                    println("${img.width},${img.height}")
+                    overlay.setImageBitmap(img)
+                }
+            })
+        } else if (filterMode == FilterMode.SOBEL) {
+
+            imageAnalysis.setAnalyzer(cameraExecutor, EdgeAnalyzer(this) { img ->
+                runOnUiThread {
+                    overlay.setImageBitmap(img)
+                }
+            })
+
+        } else if (filterMode == FilterMode.TESTML) {
+            imageAnalysis.setAnalyzer(cameraExecutor, NewMLAnalyzer(this) { img ->
+                runOnUiThread {
+                    overlay.setImageBitmap(img)
+                    println("${img.width},${img.height}")
+                }
+            })
+        } else if (filterMode == FilterMode.FACE) {
+            imageAnalysis.setAnalyzer(cameraExecutor, FaceAnalyzer(this, binding.graphicOverlay) {
+                runOnUiThread {
+                    overlay.setImageBitmap(it)
+                }
+            })
+
+        }
+
+        return imageAnalysis
+    }
+
+    fun setGraphicOverlay(overlay: GraphicOverlay?) {
+        val min = Math.min(720, 1280)
+        val max = Math.max(720, 1280)
+        overlay?.setCameraInfo(min, max, CameraSelector.DEFAULT_FRONT_CAMERA)
+        overlay?.clear()
+    }
+
+    private fun setImageCapture(): ImageCapture {
+        return ImageCapture.Builder()
+            .setTargetRotation(rotation)
+            .build()
+    }
+
+    private val orientationEventListener by lazy {
+        object : OrientationEventListener(this) {
+            override fun onOrientationChanged(orientation: Int) {
+
+                val rotation = when (orientation) {
+                    in 45 until 135 -> Surface.ROTATION_270
+                    in 135 until 225 -> Surface.ROTATION_180
+                    in 225 until 315 -> Surface.ROTATION_90
+                    else -> Surface.ROTATION_0
+                }
+
+                imageAnalysis!!.targetRotation = rotation
+                imageCapture!!.targetRotation = rotation
+            }
+        }
     }
 
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
@@ -196,10 +313,31 @@ class MainActivity : AppCompatActivity() {
         cameraExecutor.shutdown()
     }
 
+    override fun onStart() {
+        super.onStart()
+        //orientationEventListener.enable()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        //orientationEventListener.disable()
+    }
+
     companion object {
         private const val TAG = "CameraXBasic"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+
+        init {
+            if (!OpenCVLoader.initDebug()) Log.d(
+                "ERROR",
+                "Unable to load OpenCV"
+            ) else Log.d("SUCCESS", "OpenCV loaded")
+        }
+
+        enum class FilterMode {
+            NO, SOBEL, TESTML, FACE
+        }
     }
 }
