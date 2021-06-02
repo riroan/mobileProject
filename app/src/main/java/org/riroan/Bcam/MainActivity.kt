@@ -6,6 +6,9 @@ import android.icu.text.SimpleDateFormat
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.ContextMenu
+import android.view.MenuItem
+import android.view.View
 import android.view.OrientationEventListener
 import android.view.Surface
 import android.widget.ImageView
@@ -86,11 +89,51 @@ class MainActivity : AppCompatActivity() {
 
         // Set up the listener for take photo button
         camera_capture_button.setOnClickListener { takePhoto() }
+        registerForContextMenu(option_button)
 
+        //필터버튼
+//        filter_button.setOnClickListener {
+//
+//        }
+
+
+//
+//        //화면 뒤집기 버튼
+//        flip_button.setOnClickListener {
+//
+//        }
+//
         outputDirectory = getOutputDirectory()
 
         cameraExecutor = Executors.newSingleThreadExecutor()
     }
+
+    //더보기버튼
+    override fun onCreateContextMenu(
+        menu: ContextMenu?,
+        v: View?,
+        menuInfo: ContextMenu.ContextMenuInfo?
+    ) {
+        super.onCreateContextMenu(menu, v, menuInfo)
+        menuInflater.inflate(R.menu.menu, menu)
+    }
+
+    override fun onContextItemSelected(item: MenuItem): Boolean {
+        when(item?.itemId){
+            R.id.menu1->{//16:9
+
+            }
+            R.id.menu2->{//4:3
+
+            }
+            R.id.menu3->{//1:1
+
+            }
+        }
+        return super.onContextItemSelected(item)
+    }
+
+
 
     private fun takePhoto() {
         // Get a stable reference of the modifiable image capture use case
