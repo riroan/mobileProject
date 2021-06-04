@@ -7,7 +7,6 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.face.FaceDetection
 import org.opencv.android.Utils
 import org.opencv.core.Mat
-import org.riroan.Bcam.FaceGraphic
 import org.riroan.Bcam.GraphicOverlay
 
 class FaceAnalyzer(
@@ -40,8 +39,8 @@ class FaceAnalyzer(
                     for (face in faces) {
                         val bounds = face.boundingBox
                         println("${bounds.top},${bounds.left},${bounds.bottom},${bounds.right}")
-                        var faceGraphic = FaceGraphic(graphicOverlay!!, null, face)
-                        graphicOverlay.add(faceGraphic)
+                        //var faceGraphic = FaceGraphic(graphicOverlay!!, null, face)
+                        //graphicOverlay.add(faceGraphic)
                     }
                     graphicOverlay?.postInvalidate()
 
