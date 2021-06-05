@@ -1,15 +1,15 @@
 package org.riroan.Bcam
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.icu.text.SimpleDateFormat
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
+import android.util.Size
 import android.view.Surface
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -17,23 +17,20 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.OpenCVLoader
 import org.riroan.Bcam.databinding.ActivityMainBinding
-import org.riroan.Bcam.filter.*
+import org.riroan.Bcam.filter.MLAnalyzer
+import org.riroan.Bcam.utils.CameraXViewModel
 import java.io.File
 import java.util.*
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var outputDirectory: File
-    private lateinit var cameraExecutor: ExecutorService
     private lateinit var cameraSelector: CameraSelector
     private lateinit var previewView: PreviewView
-    private lateinit var overlay: ImageView
     private lateinit var graphicOverlay: GraphicOverlay
 
     private var preview: Preview? = null
@@ -41,11 +38,16 @@ class MainActivity : AppCompatActivity() {
     private var imageAnalysis: ImageAnalysis? = null
 
     private var filterMode = FilterMode.ML
-    private var useFrontCamera = true
 
     private lateinit var binding: ActivityMainBinding
     private var needUpdateGraphicOverlayImageSourceInfo = false
-    val rotation = Surface.ROTATION_270
+    private val rotation = Surface.ROTATION_270
+    private var cameraProvider: ProcessCameraProvider? = null
+    private val frameStartMs = SystemClock.elapsedRealtime()
+    private lateinit var imageProcessor: MLAnalyzer
+    private var lensFacing = CameraSelector.LENS_FACING_FRONT
+
+    var size = Size(480,640)
 
     init {
         if (!OpenCVLoader.initDebug()) Log.d(
@@ -59,55 +61,129 @@ class MainActivity : AppCompatActivity() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
-        // 권한 획득
-        if (requestCode == REQUEST_CODE_PERMISSIONS) {
-            if (allPermissionsGranted()) {
-                startCamera()
-            } else {
-                // 권한 획득 실패
-                Toast.makeText(this, "Permissions not granted by the user.", Toast.LENGTH_SHORT)
-                    .show()
-                finish()
-            }
+        Log.i(TAG, "Permission granted!")
+        if (allPermissionsGranted()) {
+            bindAllCameraUseCases()
         }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val frameStartMs = SystemClock.elapsedRealtime()
-        super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            Toast.makeText(
-                applicationContext,
-                "CameraX is only supported on SDK version >=21. Current SDK version is " +
-                        Build.VERSION.SDK_INT,
-                Toast.LENGTH_LONG
-            )
-                .show()
-            return
-        }
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
 
-        //imageView = findViewById(R.id.overlay)
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
+        setContentView(binding.root)
         previewView = binding.viewFinder
         graphicOverlay = binding.graphicOverlay
 
-        // Request camera permissions
-        if (allPermissionsGranted()) {
-            startCamera()
-        } else {
-            ActivityCompat.requestPermissions(
-                this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS
-            )
+        ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(application))
+            .get(CameraXViewModel::class.java)
+            .processCameraProvider
+            .observe(this, { provider: ProcessCameraProvider ->
+                cameraProvider = provider
+                if (allPermissionsGranted()) {
+                    bindAllCameraUseCases()
+                }
+            })
+
+        if (!allPermissionsGranted()) {
+            runtimePermissions
+        }
+    }
+
+    private fun bindAllCameraUseCases() {
+        if (cameraProvider != null) {
+            cameraProvider!!.unbindAll()
+            bindPreviewUseCase()
+            bindAnalysisUseCase()
+        }
+    }
+
+    private fun bindAnalysisUseCase() {
+        if (cameraProvider == null) {
+            return
+        }
+        if (imageAnalysis == null) {
+            cameraProvider!!.unbind(imageAnalysis)
+        }
+        imageProcessor = when (filterMode) {
+            FilterMode.ML -> MLAnalyzer()
         }
 
-        // Set up the listener for take photo button
-        camera_capture_button.setOnClickListener { takePhoto() }
+        imageAnalysis = ImageAnalysis.Builder()
+            //.setTargetAspectRatio(AspectRatio.RATIO_16_9)
+            .setTargetResolution(size)
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
 
-        outputDirectory = getOutputDirectory()
+        needUpdateGraphicOverlayImageSourceInfo = true
 
-        cameraExecutor = Executors.newSingleThreadExecutor()
-        println("Elapsed time : ${SystemClock.elapsedRealtime() - frameStartMs}")
+        imageAnalysis?.setAnalyzer(ContextCompat.getMainExecutor(this), { imageProxy ->
+
+            if (needUpdateGraphicOverlayImageSourceInfo) {
+                val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+                val isImageFlipped =
+                    lensFacing == CameraSelector.LENS_FACING_FRONT
+                if (rotationDegrees == 0 || rotationDegrees == 180) {
+                    graphicOverlay.setImageSourceInfo(
+                        imageProxy.width,
+                        imageProxy.height,
+                        isImageFlipped
+                    )
+                } else {
+                    graphicOverlay.setImageSourceInfo(
+                        imageProxy.height,
+                        imageProxy.width,
+                        isImageFlipped
+                    )
+                }
+                needUpdateGraphicOverlayImageSourceInfo = false
+            }
+            imageProcessor.processImageProxy(imageProxy, graphicOverlay)
+            println("Elapsed time : ${SystemClock.elapsedRealtime() - frameStartMs}")
+        })
+        cameraProvider!!.bindToLifecycle(this, cameraSelector, imageAnalysis)
+    }
+
+    // 전면 후면 카메라 바꾸는 코드
+    fun changeLensFacing() {
+        if (cameraProvider == null) {
+            return
+        }
+        val newLensFacing = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+            CameraSelector.LENS_FACING_BACK
+        } else {
+            CameraSelector.LENS_FACING_FRONT
+        }
+        val newCameraSelector =
+            CameraSelector.Builder().requireLensFacing(newLensFacing).build()
+
+        if (cameraProvider!!.hasCamera(newCameraSelector)) {
+            Log.d(TAG, "Set facing to $newLensFacing")
+            lensFacing = newLensFacing
+            cameraSelector = newCameraSelector
+            bindAllCameraUseCases()
+            return
+        }
+    }
+
+    private fun bindPreviewUseCase() {
+        if (cameraProvider == null) {
+            return
+        }
+        if (preview != null) {
+            cameraProvider!!.unbind(preview)
+        }
+
+        preview = Preview.Builder()
+            //.setTargetAspectRatio(AspectRatio.RATIO_16_9)
+            .setTargetResolution(size)
+            .build()
+            .also {
+                it.setSurfaceProvider(viewFinder.surfaceProvider)
+            }
+        cameraProvider!!.bindToLifecycle(this, cameraSelector, preview)
     }
 
     private fun takePhoto() {
@@ -147,114 +223,37 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
-    private fun startCamera() {
-        // 카메라를 열고 닫는 작업
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
-        cameraProviderFuture.addListener(Runnable {
-            // Used to bind the lifecycle of cameras to the lifecycle owner
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
-            preview = setPreview()
-            imageCapture = setImageCapture()
-            imageAnalysis = setImageAnalysis()
-            if (useFrontCamera)
-                cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-            else
-                cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-            try {
-                // Unbind use cases before rebinding
-                cameraProvider.unbindAll()
-
-                // Bind use cases to camera
-                // 카메라가 앱의 라이프사이클을 따라감
-                cameraProvider.bindToLifecycle(
-                    this as LifecycleOwner, cameraSelector, imageAnalysis, imageCapture, preview
-                )
-
-            } catch (exc: Exception) {
-                Log.e(TAG, "Use case binding failed", exc)
+    private val requiredPermissions: Array<String?>
+        get() = try {
+            val info = this.packageManager
+                .getPackageInfo(this.packageName, PackageManager.GET_PERMISSIONS)
+            val ps = info.requestedPermissions
+            if (ps != null && ps.isNotEmpty()) {
+                ps
+            } else {
+                arrayOfNulls(0)
             }
-
-
-        }, ContextCompat.getMainExecutor(this))
-    }
-
-    private fun setPreview(): Preview {
-        // 사진 찍기전 보이는 화면
-        val preview = Preview.Builder()
-            .setTargetAspectRatio(AspectRatio.RATIO_16_9)
-            .build()
-            .also {
-                it.setSurfaceProvider(viewFinder.surfaceProvider)
-            }
-        // 후면 카메라
-        return preview
-    }
-
-    private fun setImageAnalysis(): ImageAnalysis {
-
-        val imageAnalysis = ImageAnalysis.Builder()
-            .setTargetAspectRatio(AspectRatio.RATIO_16_9)
-            .build()
-
-        // 만든 필터 실행하고 싶을 때 EdgeAnalyzer 대신에 넣으면 됩니다.
-        needUpdateGraphicOverlayImageSourceInfo = true
-        if (filterMode == FilterMode.NO) {
-            imageAnalysis.setAnalyzer(cameraExecutor, NoAnalyzer(this) { img ->
-                runOnUiThread {
-                    println("${img.width},${img.height}")
-                    overlay.setImageBitmap(img)
-                }
-            })
-        } else if (filterMode == FilterMode.SOBEL) {
-            imageAnalysis.setAnalyzer(cameraExecutor, EdgeAnalyzer(this) { img ->
-                runOnUiThread {
-                    overlay.setImageBitmap(img)
-                }
-            })
-
-        } else if (filterMode == FilterMode.TESTML) {
-            imageAnalysis.setAnalyzer(cameraExecutor, TestMLAnalyzer(this) { img ->
-                runOnUiThread {
-                    overlay.setImageBitmap(img)
-                    println("${img.width},${img.height}")
-                }
-            })
-        } else if (filterMode == FilterMode.FACE) {
-            imageAnalysis.setAnalyzer(cameraExecutor, FaceAnalyzer(this, binding.graphicOverlay) {
-                runOnUiThread {
-                    overlay.setImageBitmap(it)
-                }
-            })
-        } else if (filterMode == FilterMode.ML) {
-            val imageProcessor = MLAnalyzer2(this, graphicOverlay)
-            imageAnalysis.setAnalyzer(cameraExecutor, ImageAnalysis.Analyzer { imageProxy ->
-
-                if (needUpdateGraphicOverlayImageSourceInfo) {
-                    val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-                    if (rotationDegrees == 0 || rotationDegrees == 180) {
-                        graphicOverlay.setImageSourceInfo(
-                            imageProxy.width,
-                            imageProxy.height,
-                            cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
-                        )
-                    } else {
-                        graphicOverlay.setImageSourceInfo(
-                            imageProxy.height,
-                            imageProxy.width,
-                            cameraSelector == CameraSelector.DEFAULT_FRONT_CAMERA
-                        )
-                    }
-                    needUpdateGraphicOverlayImageSourceInfo = false
-                }
-                imageProcessor.processImageProxy(imageProxy)
-
-            })
+        } catch (e: Exception) {
+            arrayOfNulls(0)
         }
-        return imageAnalysis
-    }
+
+    private val runtimePermissions: Unit
+        get() {
+            val allNeededPermissions: MutableList<String?> = ArrayList()
+            for (permission in requiredPermissions) {
+                if (!isPermissionGranted(this, permission)) {
+                    allNeededPermissions.add(permission)
+                }
+            }
+            if (allNeededPermissions.isNotEmpty()) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    allNeededPermissions.toTypedArray(),
+                    PERMISSION_REQUESTS
+                )
+            }
+        }
+
 
     private fun setImageCapture(): ImageCapture {
         return ImageCapture.Builder()
@@ -276,19 +275,34 @@ class MainActivity : AppCompatActivity() {
             mediaDir else filesDir
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        cameraExecutor.shutdown()
+    public override fun onResume() {
+        super.onResume()
+        bindAllCameraUseCases()
     }
 
     companion object {
         private const val TAG = "CameraXBasic"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val REQUEST_CODE_PERMISSIONS = 10
+        private const val PERMISSION_REQUESTS = 1
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 
         enum class FilterMode {
-            NO, SOBEL, TESTML, FACE, ML
+            ML
+        }
+
+        private fun isPermissionGranted(
+            context: Context,
+            permission: String?
+        ): Boolean {
+            if (ContextCompat.checkSelfPermission(context, permission!!)
+                == PackageManager.PERMISSION_GRANTED
+            ) {
+                Log.i(TAG, "Permission granted: $permission")
+                return true
+            }
+            Log.i(TAG, "Permission NOT granted: $permission")
+            return false
         }
     }
 }

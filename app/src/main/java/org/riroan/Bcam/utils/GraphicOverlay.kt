@@ -158,13 +158,9 @@ class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
         postInvalidate()
     }
 
-    fun getImageWidth(): Int {
-        return imageWidth
-    }
+    fun getImageWidth(): Int = imageWidth
 
-    fun getImageHeight(): Int {
-        return imageHeight
-    }
+    fun getImageHeight(): Int = imageHeight
 
     private fun updateTransformationIfNeeded() {
         if (!needUpdateTransformation || imageWidth <= 0 || imageHeight <= 0) {
