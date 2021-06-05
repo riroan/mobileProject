@@ -10,6 +10,7 @@ typealias bmpListener = (img: Bitmap) -> Unit
 
 abstract class BaseAnalyzer(context: Context) : ImageAnalysis.Analyzer {
     var img: Bitmap? = null
+    var bitmap: Bitmap? = null
 
     fun Image.toBitmap(quality: Int): Bitmap {
         val yBuffer = planes[0].buffer // Y
