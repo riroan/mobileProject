@@ -14,16 +14,14 @@ import org.riroan.Bcam.utils.ImageGraphic
 class MLAnalyzer :
     MLBaseAnalyzer() {
     @SuppressLint("UnsafeOptInUsageError")
-    fun processImageProxy(imageProxy: ImageProxy, graphicOverlay: GraphicOverlay) {
-
-        println("${imageProxy.width}, ${imageProxy.height}")
+    override fun processImageProxy(imageProxy: ImageProxy, graphicOverlay: GraphicOverlay) {
 
         val mediaImage = imageProxy.image
 
         if (mediaImage != null) {
             val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
             val bitmap = BitmapUtils.getBitmap(imageProxy)
-            val detector = FaceDetection.getClient(option)
+
             detector.process(image)
                 .addOnSuccessListener { faces ->
                     graphicOverlay.clear()
@@ -34,7 +32,6 @@ class MLAnalyzer :
 
                         val rightCheek = face.getLandmark(FaceLandmark.LEFT_CHEEK)
                         if (rightCheek != null) {
-                            println("leftcheek is not null : ${rightCheek.position.x}, ${rightCheek.position.y}")
                             graphicOverlay.add(
                                 ImageGraphic(
                                     graphicOverlay,

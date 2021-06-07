@@ -25,7 +25,10 @@ import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.OpenCVLoader
 import org.riroan.Bcam.databinding.ActivityMainBinding
+import org.riroan.Bcam.filter.BaseAnalyzer
+import org.riroan.Bcam.filter.EdgeAnalyzer
 import org.riroan.Bcam.filter.MLAnalyzer
+import org.riroan.Bcam.filter.NoAnalyzer
 import org.riroan.Bcam.utils.CameraXViewModel
 import java.io.File
 import java.util.*
@@ -36,22 +39,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraSelector: CameraSelector
     private lateinit var previewView: PreviewView
     private lateinit var graphicOverlay: GraphicOverlay
+    private lateinit var binding: ActivityMainBinding
 
     private var preview: Preview? = null
     private var imageCapture: ImageCapture? = null
     private var imageAnalysis: ImageAnalysis? = null
-
-    private var filterMode = FilterMode.ML
-
-    private lateinit var binding: ActivityMainBinding
-    private var needUpdateGraphicOverlayImageSourceInfo = false
-    private val rotation = Surface.ROTATION_270
+    private var imageProcessor: BaseAnalyzer? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private val frameStartMs = SystemClock.elapsedRealtime()
-    private lateinit var imageProcessor: MLAnalyzer
+
+    private var filterMode = FilterMode.SOBEL
+    private var needUpdateGraphicOverlayImageSourceInfo = false
     private var lensFacing = CameraSelector.LENS_FACING_FRONT
 
-    var size = Size(480,640)
+    private val frameStartMs = SystemClock.elapsedRealtime()
+
+    var size = Size(480, 640)
 
     init {
         if (!OpenCVLoader.initDebug()) Log.d(
@@ -112,6 +114,8 @@ class MainActivity : AppCompatActivity() {
             cameraProvider!!.unbind(imageAnalysis)
         }
         imageProcessor = when (filterMode) {
+            FilterMode.NO -> NoAnalyzer()
+            FilterMode.SOBEL -> EdgeAnalyzer()
             FilterMode.ML -> MLAnalyzer()
         }
 
@@ -144,7 +148,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 needUpdateGraphicOverlayImageSourceInfo = false
             }
-            imageProcessor.processImageProxy(imageProxy, graphicOverlay)
+            imageProcessor!!.processImageProxy(imageProxy, graphicOverlay)
             println("Elapsed time : ${SystemClock.elapsedRealtime() - frameStartMs}")
         })
         cameraProvider!!.bindToLifecycle(this, cameraSelector, imageAnalysis)
@@ -179,7 +183,7 @@ class MainActivity : AppCompatActivity() {
         if (preview != null) {
             cameraProvider!!.unbind(preview)
         }
-        
+
         // Set up the listener for take photo button
         camera_capture_button.setOnClickListener { takePhoto() }
         registerForContextMenu(option_button)
@@ -219,20 +223,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onContextItemSelected(item: MenuItem): Boolean {
-        when(item?.itemId){
-            R.id.menu1->{//16:9
+        when (item?.itemId) {
+            R.id.menu1 -> {//16:9
 
             }
-            R.id.menu2->{//4:3
+            R.id.menu2 -> {//4:3
 
             }
-            R.id.menu3->{//1:1
+            R.id.menu3 -> {//1:1
 
             }
         }
         return super.onContextItemSelected(item)
     }
-
 
 
     private fun takePhoto() {
@@ -306,7 +309,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun setImageCapture(): ImageCapture {
         return ImageCapture.Builder()
-            .setTargetRotation(rotation)
             .build()
     }
 
@@ -337,7 +339,7 @@ class MainActivity : AppCompatActivity() {
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 
         enum class FilterMode {
-            ML
+            NO, SOBEL, ML
         }
 
         private fun isPermissionGranted(
