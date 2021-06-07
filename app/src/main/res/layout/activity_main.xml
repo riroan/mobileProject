@@ -48,9 +48,9 @@
         android:id="@+id/album_button"
         android:layout_width="50dp"
         android:layout_height="50dp"
-        app:layout_constraintStart_toEndOf="@id/camera_capture_button"
-        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/camera_capture_button"
         app:srcCompat="@drawable/ic_baseline_photo_24" />
 
     <ImageView

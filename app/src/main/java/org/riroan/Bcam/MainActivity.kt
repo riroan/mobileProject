@@ -25,10 +25,7 @@ import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.activity_main.*
 import org.opencv.android.OpenCVLoader
 import org.riroan.Bcam.databinding.ActivityMainBinding
-import org.riroan.Bcam.filter.BaseAnalyzer
-import org.riroan.Bcam.filter.EdgeAnalyzer
-import org.riroan.Bcam.filter.MLAnalyzer
-import org.riroan.Bcam.filter.NoAnalyzer
+import org.riroan.Bcam.filter.*
 import org.riroan.Bcam.utils.CameraXViewModel
 import java.io.File
 import java.util.*
@@ -47,7 +44,7 @@ class MainActivity : AppCompatActivity() {
     private var imageProcessor: BaseAnalyzer? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    private var filterMode = FilterMode.SOBEL
+    private var filterMode = FilterMode.SEGMENT
     private var needUpdateGraphicOverlayImageSourceInfo = false
     private var lensFacing = CameraSelector.LENS_FACING_FRONT
 
@@ -116,7 +113,8 @@ class MainActivity : AppCompatActivity() {
         imageProcessor = when (filterMode) {
             FilterMode.NO -> NoAnalyzer()
             FilterMode.SOBEL -> EdgeAnalyzer()
-            FilterMode.ML -> MLAnalyzer()
+            FilterMode.CHEEK -> CheekImageAnalyzer(R.raw.star)
+            FilterMode.SEGMENT -> SegmentationAnalyzer()
         }
 
         imageAnalysis = ImageAnalysis.Builder()
@@ -194,12 +192,29 @@ class MainActivity : AppCompatActivity() {
 //        }
 
 
-//
-//        //화면 뒤집기 버튼
-//        flip_button.setOnClickListener {
-//
-//        }
-//
+
+//        화면 뒤집기 버튼
+        flip_button.setOnClickListener {
+            if (cameraProvider == null) {
+                return@setOnClickListener
+            }
+            val newLensFacing = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+                CameraSelector.LENS_FACING_BACK
+            } else {
+                CameraSelector.LENS_FACING_FRONT
+            }
+            val newCameraSelector =
+                CameraSelector.Builder().requireLensFacing(newLensFacing).build()
+
+            if (cameraProvider!!.hasCamera(newCameraSelector)) {
+                Log.d(TAG, "Set facing to $newLensFacing")
+                lensFacing = newLensFacing
+                cameraSelector = newCameraSelector
+                bindAllCameraUseCases()
+                return@setOnClickListener
+            }
+        }
+
         outputDirectory = getOutputDirectory()
 
         preview = Preview.Builder()
@@ -249,7 +264,7 @@ class MainActivity : AppCompatActivity() {
         val photoFile = File(
             outputDirectory,
             SimpleDateFormat(
-                FILENAME_FORMAT, Locale.US
+                FILENAME_FORMAT, Locale.KOREA
             ).format(System.currentTimeMillis()) + ".jpg"
         )
 
@@ -334,12 +349,11 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "CameraXBasic"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
-        private const val REQUEST_CODE_PERMISSIONS = 10
         private const val PERMISSION_REQUESTS = 1
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
 
         enum class FilterMode {
-            NO, SOBEL, ML
+            NO, SOBEL, CHEEK, SEGMENT
         }
 
         private fun isPermissionGranted(
