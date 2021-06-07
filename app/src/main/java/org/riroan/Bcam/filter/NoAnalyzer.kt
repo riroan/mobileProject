@@ -4,20 +4,22 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.camera.core.ImageProxy
+import org.riroan.Bcam.GraphicOverlay
+import org.riroan.Bcam.utils.BitmapUtils
+import org.riroan.Bcam.utils.CameraImageGraphic
 
 
-typealias NoListener = (luma: Bitmap) -> Unit
-
-class NoAnalyzer(val context: Context, val listener: NoListener) :
-    BaseAnalyzer(context) {
+class NoAnalyzer :
+    BaseAnalyzer {
 
     @SuppressLint("UnsafeOptInUsageError")
-    override fun analyze(image: ImageProxy) {
+    override fun processImageProxy(imageProxy: ImageProxy, graphicOverlay: GraphicOverlay) {
 
-        val img = image.image?.toBitmap(100)
-        var bitmapToFloating = img?.rotateWithReverse(270f)
-        bitmapToFloating?.let{listener(it)}
+        val bitmap = BitmapUtils.getBitmap(imageProxy)
+        graphicOverlay.clear()
+        graphicOverlay.add(CameraImageGraphic(graphicOverlay, bitmap!!))
+        graphicOverlay.postInvalidate()
 
-        image.close()
+        imageProxy.close()
     }
 }
