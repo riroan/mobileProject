@@ -1,6 +1,7 @@
 package org.riroan.Bcam
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -14,7 +15,8 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
     var permission_list = arrayOf(
         Manifest.permission.CAMERA,
-        Manifest.permission.WRITE_EXTERNAL_STORAGE
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE
     )
     var dirPath: String? = null
     var cameraAPI: CameraAPI? = null
@@ -50,6 +52,7 @@ class MainActivity : AppCompatActivity() {
         try {
             val tempPath = Environment.getExternalStorageDirectory().absolutePath
             dirPath = "$tempPath/Android/data/$packageName"
+            println("test"+ dirPath)
             val file = File(dirPath)
             if (file.exists() == false) {
                 file.mkdir()
@@ -62,7 +65,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun imageCaptureBtn(view: View?) {
-        val filePath = dirPath + "/temp_" + System.currentTimeMillis() + ".jpg"
-        cameraAPI!!.imageCapture(filePath)
+//        val filePath = dirPath + "/temp_" + System.currentTimeMillis() + ".jpg"
+//        cameraAPI!!.imageCapture(filePath)
+
+        // test
+        val intent = Intent(this, FileManagerActivity::class.java)
+        startActivity(intent)
     }
 }
