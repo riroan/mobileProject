@@ -56,6 +56,25 @@ class GraphicOverlay(context: Context?, attrs: AttributeSet?) :
     private var isImageFlipped = false
     private var needUpdateTransformation = true
 
+    fun translateX(x: Float): Float {
+        return if (isImageFlipped) {
+            width - (scale(x) - postScaleWidthOffset)
+        } else {
+            scale(x) - postScaleWidthOffset
+        }
+    }
+
+    /**
+     * Adjusts the y coordinate from the image's coordinate system to the view coordinate system.
+     */
+    fun translateY(y: Float): Float {
+        return scale(y) - postScaleHeightOffset
+    }
+
+    fun scale(imagePixel: Float): Float {
+        return imagePixel * scaleFactor
+    }
+
     /**
      * Base class for a custom graphics object to be rendered within the graphic overlay. Subclass
      * this and implement the [Graphic.draw] method to define the graphics element. Add
