@@ -2,6 +2,7 @@ package org.riroan.Bcam
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.icu.text.SimpleDateFormat
 import android.net.Uri
@@ -185,6 +186,11 @@ class MainActivity : AppCompatActivity() {
         // Set up the listener for take photo button
         camera_capture_button.setOnClickListener { takePhoto() }
         registerForContextMenu(option_button)
+
+        album_button.setOnClickListener {
+            val intent = Intent(this, FileManagerActivity::class.java)
+            startActivity(intent)
+        }
 
         //필터버튼
 //        filter_button.setOnClickListener {
