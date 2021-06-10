@@ -14,6 +14,5 @@ abstract class MLBaseAnalyzer : BaseAnalyzer {
 
     val segmentationOption = SelfieSegmenterOptions.Builder()
         .setDetectorMode(SelfieSegmenterOptions.STREAM_MODE)
-        .enableRawSizeMask()
         .build()
 }

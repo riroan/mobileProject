@@ -14,6 +14,7 @@ import org.riroan.Bcam.utils.ImageGraphic
 class CheekImageAnalyzer(source:Int) :
     MLBaseAnalyzer() {
     private var imageSource = source
+    private val srcSize = 70
 
     fun setImage(source: Int) {
         imageSource = source
@@ -46,7 +47,7 @@ class CheekImageAnalyzer(source:Int) :
                                     graphicOverlay,
                                     rightCheek.position.x,
                                     rightCheek.position.y,
-                                    70, 70,
+                                    srcSize, srcSize,
                                     imageSource
                                 )
                             )
@@ -57,7 +58,7 @@ class CheekImageAnalyzer(source:Int) :
                                     graphicOverlay,
                                     leftCheek.position.x,
                                     leftCheek.position.y,
-                                    70, 70,
+                                    srcSize, srcSize,
                                     imageSource
                                 )
                             )

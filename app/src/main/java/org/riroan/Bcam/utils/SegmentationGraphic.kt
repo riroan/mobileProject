@@ -40,12 +40,13 @@ class SegmentationGraphic(overlay: GraphicOverlay, segmentationMask: Segmentatio
             IntArray(maskWidth * maskHeight)
         val context = applicationContext
         var bitmap =
-            BitmapFactory.decodeResource(context.resources, R.raw.back4)
+            BitmapFactory.decodeResource(context.resources, R.raw.back1)
+        println("$maskWidth, $maskHeight")
         bitmap = Bitmap.createScaledBitmap(bitmap, maskWidth, maskHeight, false)
 
         for (i in 0 until maskWidth * maskHeight) {
             val backgroundLikelihood = 1 - byteBuffer.float
-            if (backgroundLikelihood > 0.8) {
+            if (backgroundLikelihood > 0.3) {
                 //colors[i] = Color.argb(128, 255, 0, 255)
                 colors[i] = bitmap.getPixel(i % maskWidth, i / maskHeight)
             }
