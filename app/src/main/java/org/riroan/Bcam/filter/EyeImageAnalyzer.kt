@@ -9,6 +9,7 @@ import com.google.mlkit.vision.face.FaceDetection
 import com.google.mlkit.vision.face.FaceLandmark
 import org.riroan.Bcam.FaceGraphic
 import org.riroan.Bcam.GraphicOverlay
+import org.riroan.Bcam.R
 import org.riroan.Bcam.utils.BitmapUtils
 import org.riroan.Bcam.utils.CameraImageGraphic
 import org.riroan.Bcam.utils.ImageGraphic
@@ -36,12 +37,43 @@ class EyeImageAnalyzer(source: Int) :
                     graphicOverlay.add(CameraImageGraphic(graphicOverlay, bitmap!!))
 
                     for (face in faces) {
-                        // 얼굴에 점같은거 표시
-                        graphicOverlay.add(FaceGraphic(graphicOverlay, face))
-
+                        val leftEyePoint = face.getLandmark(FaceLandmark.RIGHT_EYE).position
+                        val rightEyePoint = face.getLandmark(FaceLandmark.LEFT_EYE).position
                         // 카메라상에서는 좌우 반전이기때문에 왼쪽이 오른쪽으로 나옴
-                        val rightEye = face.getContour(FaceContour.LEFT_EYE).points
-                        val leftEye = face.getContour(FaceContour.RIGHT_EYE)
+                        val rightEyeContour = face.getContour(FaceContour.RIGHT_EYE)?.points
+                        val leftEyeContour = face.getContour(FaceContour.LEFT_EYE)?.points
+                        if (leftEyeContour != null) {
+
+                            val leftEyeSize = getPoint(leftEyeContour!!, graphicOverlay)
+                            if (leftEyeSize > 5) {
+                                graphicOverlay.add(
+                                    ImageGraphic(
+                                        graphicOverlay,
+                                        leftEyePoint.x,
+                                        leftEyePoint.y,
+                                        leftEyeSize.toInt(),
+                                        leftEyeSize.toInt() - 5,
+                                        imageSource
+                                    )
+                                )
+                            }
+                        }
+
+                        if (rightEyeContour != null) {
+                            val rightEyeSize = getPoint(rightEyeContour!!, graphicOverlay)
+                            if (rightEyeSize > 5) {
+                                graphicOverlay.add(
+                                    ImageGraphic(
+                                        graphicOverlay,
+                                        rightEyePoint.x,
+                                        rightEyePoint.y,
+                                        rightEyeSize.toInt(),
+                                        rightEyeSize.toInt() - 5,
+                                        imageSource
+                                    )
+                                )
+                            }
+                        }
                     }
 
                     graphicOverlay.postInvalidate()
@@ -53,25 +85,21 @@ class EyeImageAnalyzer(source: Int) :
         }
     }
 
-    fun getPoint(points: List<PointF>): Array<PointF> {
-        var minx = points[0].x
-        var maxx = points[0].x
+    fun getPoint(points: List<PointF>, graphicOverlay: GraphicOverlay): Float {
         var miny = points[0].y
         var maxy = points[0].y
         for (pt in points) {
-            if (minx > pt.x) {
-                minx = pt.x
-            }
             if (miny > pt.y) {
                 miny = pt.y
-            }
-            if (maxx < pt.x) {
-                maxx = pt.x
             }
             if (maxy < pt.y) {
                 maxy = pt.y
             }
         }
-        return arrayOf(PointF(minx, miny), PointF(maxx, maxy))
+        println("$miny  $maxy")
+
+        miny = graphicOverlay.translateY(miny)
+        maxy = graphicOverlay.translateY(maxy)
+        return maxy - miny + 5
     }
 }
