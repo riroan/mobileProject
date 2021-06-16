@@ -30,6 +30,7 @@
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:background="@drawable/ic_baseline_photo_filter_24"
+        android:backgroundTint="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/camera_capture_button"
         app:layout_constraintStart_toStartOf="parent" />
@@ -48,6 +49,7 @@
         android:id="@+id/album_button"
         android:layout_width="50dp"
         android:layout_height="50dp"
+        app:tint="#FFFFFF"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/camera_capture_button"
@@ -55,6 +57,7 @@
 
     <ImageView
         android:id="@+id/option_button"
+        app:tint="#FFFFFF"
         android:layout_width="50dp"
         android:layout_height="50dp"
         android:layout_marginStart="32dp"
@@ -67,7 +70,7 @@
         android:id="@+id/flip_button"
         android:layout_width="50dp"
         android:layout_height="50dp"
-
+        app:tint="#FFFFFF"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="32dp"
         app:layout_constraintEnd_toEndOf="parent"

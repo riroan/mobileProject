@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
     private var imageProcessor: BaseAnalyzer? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    private var filterMode = FilterMode.SEGMENT
+    private var filterMode = FilterMode.EYE
     private var needUpdateGraphicOverlayImageSourceInfo = false
     private var lensFacing = CameraSelector.LENS_FACING_FRONT
 
@@ -116,6 +116,7 @@ class MainActivity : AppCompatActivity() {
             FilterMode.SOBEL -> EdgeAnalyzer()
             FilterMode.CHEEK -> CheekImageAnalyzer(R.raw.star)
             FilterMode.SEGMENT -> SegmentationAnalyzer()
+            FilterMode.EYE -> EyeImageAnalyzer(R.raw.eye1)
         }
 
         imageAnalysis = ImageAnalysis.Builder()
@@ -356,10 +357,10 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "CameraXBasic"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val PERMISSION_REQUESTS = 1
-        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
+        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
 
         enum class FilterMode {
-            NO, SOBEL, CHEEK, SEGMENT
+            NO, SOBEL, CHEEK, SEGMENT, EYE
         }
 
         private fun isPermissionGranted(

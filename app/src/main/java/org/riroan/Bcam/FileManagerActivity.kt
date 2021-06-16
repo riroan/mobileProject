@@ -11,11 +11,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.recyclerview.widget.GridLayoutManager
 import org.riroan.Bcam.databinding.ActivityFileManagerBinding
+import java.io.File
 
 
 class FileManagerActivity : AppCompatActivity() {
-    lateinit var binding : ActivityFileManagerBinding
-    var data:ArrayList<ItemData> = ArrayList()
+    lateinit var binding: ActivityFileManagerBinding
+    var data: ArrayList<ItemData> = ArrayList()
     lateinit var adapter: FileManagerAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -36,38 +37,42 @@ class FileManagerActivity : AppCompatActivity() {
                 null,
                 MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC"
             )
-
+            println("123")
             if (cursor != null) { // 필터링
-                while(cursor.moveToNext()) {
+                while (cursor.moveToNext()) {
 //                for (i in 1..10) {
 //                    cursor.moveToNext()
 
-                    var uri = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
-                    println(uri)
+                    var uri =
+                        cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
                     var dir = uri.split("/")
+                    println("uri $uri")
 
 //                    for (elem in dir) { // test
 //                        println(elem)
 //                    }
 
-                    if(dir[1] != "storage"){
+                    /*if (dir[1] != "storage") {
                         continue
                     }
-                    if(dir[2] != "emulated"){
+                    if (dir[2] != "emulated") {
                         continue
                     }
-                    if(dir[3] != "0"){
+                    if (dir[3] != "0") {
                         continue
                     }
-                    if(dir[4] != "DCIM"){
+                    if (dir[4] != "DCIM") {
                         continue
                     }
-                    if(dir[5] != "Screenshots"){
+                    if (dir[5] != "Screenshots") {
                         continue
-                    }
+                    }*/
 //                    "/storage/emulated/0/Android/data/org.riroan.Bcam" 이걸로 바꿔야됨
 
                     var bitmap = BitmapFactory.decodeFile(uri)
+                    if (bitmap == null){
+                        continue
+                    }
                     data.add(ItemData(uri.toUri(), bitmap))
                 }
                 cursor.close()
@@ -75,16 +80,16 @@ class FileManagerActivity : AppCompatActivity() {
 
 
             adapter = FileManagerAdapter(data)
-            adapter.itemClickListener = object : FileManagerAdapter.OnItemClickListener{
+            adapter.itemClickListener = object : FileManagerAdapter.OnItemClickListener {
                 override fun onItemClick(
                     holder: FileManagerAdapter.ViewHolder,
                     view: View,
                     data: ItemData,
                     position: Int
                 ) {
-                    holder.thumbnail_imageView.setColorFilter(Color.WHITE)
+                    //holder.thumbnail_imageView.setColorFilter(Color.WHITE)
 //                    adapter.itemsData[position].uri = "".toUri()
-                    adapter.itemsData[position].bitmap = null
+                    //adapter.itemsData[position].bitmap = null
                     val intent = Intent(view.context, EditPhotoActivity::class.java)
                     intent.putExtra("uri", adapter.itemsData[position].uri.toString())
                     startActivity(intent)
