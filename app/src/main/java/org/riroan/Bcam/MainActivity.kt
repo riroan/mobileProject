@@ -284,7 +284,12 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
 
-                    second_intent.putExtra("imagePath", savedUri)
+                    second_intent.putExtra("imagePath", filePath)
+                    if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+                        second_intent.putExtra("isFront", true)
+                    } else {
+                        second_intent.putExtra("isFront", false)
+                    }
                     startActivity(second_intent)
                 }
             })
