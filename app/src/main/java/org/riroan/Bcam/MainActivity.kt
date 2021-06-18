@@ -11,19 +11,18 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.util.Log
 import android.util.Size
-import android.view.ContextMenu
-import android.view.MenuItem
 import android.view.View
-import android.view.OrientationEventListener
-import android.view.Surface
-import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentPagerAdapter
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.activity_main.filter_button
@@ -31,16 +30,15 @@ import kotlinx.android.synthetic.main.activity_second.*
 import org.opencv.android.OpenCVLoader
 import org.riroan.Bcam.databinding.ActivityMainBinding
 import org.riroan.Bcam.filter.*
-import org.riroan.Bcam.utils.CameraXViewModel
-import org.riroan.Bcam.utils.FilterMenuFragment
+import org.riroan.Bcam.utils.*
 import java.io.File
 import java.util.*
 
+@Suppress("DEPRECATION")
 class MainActivity : AppCompatActivity() {
 
     private lateinit var outputDirectory: File
     private lateinit var cameraSelector: CameraSelector
-    private lateinit var previewView: PreviewView
     private lateinit var graphicOverlay: GraphicOverlay
     private lateinit var binding: ActivityMainBinding
 
@@ -104,6 +102,8 @@ class MainActivity : AppCompatActivity() {
         if (!allPermissionsGranted()) {
             runtimePermissions
         }
+
+
     }
 
     private fun bindAllCameraUseCases() {
@@ -216,6 +216,9 @@ class MainActivity : AppCompatActivity() {
         // Set up the listener for take photo button
         camera_capture_button.setOnClickListener {
             takePhoto()
+            val intent = Intent(this, SecondActivity::class.java)
+            intent.putExtra("imagePath", filePath)
+            startActivity(intent)
         }
 
         album_button.setOnClickListener {
@@ -291,6 +294,8 @@ class MainActivity : AppCompatActivity() {
                 }
             })
     }
+
+
 
     private val requiredPermissions: Array<String?>
         get() = try {
