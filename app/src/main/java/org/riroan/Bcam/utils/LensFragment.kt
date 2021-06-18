@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -40,7 +41,7 @@ class LensFragment : Fragment() {
         private val inflater = LayoutInflater.from(context)
 
         override fun getItemCount(): Int {
-            return ITEM_COUNT
+            return items.size
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -50,8 +51,8 @@ class LensFragment : Fragment() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             @SuppressLint("SetTextI18n")
-            holder.itemView.findViewById<TextView>(R.id.filter_name).text = "Item ${position+1}"
-
+            holder.itemView.findViewById<TextView>(R.id.filter_name).text = "Item ${position + 1}"
+            holder.itemView.findViewById<ImageView>(R.id.filter_thumbnail).setImageResource(items[position])
         }
     }
 
@@ -59,6 +60,6 @@ class LensFragment : Fragment() {
         RecyclerView.ViewHolder(containerView), LayoutContainer
 
     companion object {
-        private const val ITEM_COUNT = 10
+        val items = arrayOf(R.raw.eye1, R.raw.eye2, R.raw.eye3, R.raw.eye4)
     }
 }

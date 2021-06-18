@@ -1,32 +1,16 @@
-@file:Suppress("DEPRECATION")
-
 package org.riroan.Bcam.utils
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.FragmentManager
-import androidx.fragment.app.FragmentPagerAdapter
-import androidx.fragment.app.activityViewModels
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
-import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.tabs.TabLayout
-import kotlinx.android.synthetic.main.dialog_filtermenu.*
-import org.riroan.Bcam.MainActivity
 import org.riroan.Bcam.R
 
-class filterMenuFragment(): BottomSheetDialogFragment() {
+class FilterMenuFragment(): BottomSheetDialogFragment() {
 
 
     private lateinit var bottomSheet: ViewGroup
