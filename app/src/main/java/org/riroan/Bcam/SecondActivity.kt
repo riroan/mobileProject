@@ -12,8 +12,6 @@ import org.riroan.Bcam.databinding.ActivitySecondBinding
 
 class SecondActivity : AppCompatActivity() {
     lateinit var binding: ActivitySecondBinding
-    var imgPath: String? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySecondBinding.inflate(layoutInflater)
@@ -23,15 +21,26 @@ class SecondActivity : AppCompatActivity() {
 
     private fun init() {
         if (intent.hasExtra("imagePath")) {
-            imgPath = intent.getStringExtra("imagePath")
+            val img = binding.imageView
+            val imgPath = intent.getStringExtra("imagePath")
+            val isFront = intent.getBooleanExtra("isFront", false)
             var bitmap = BitmapFactory.decodeFile(imgPath)
             var exif = ExifInterface(imgPath!!)
             val exifOrientation = exif.getAttributeInt(
                 ExifInterface.TAG_ORIENTATION,
                 ExifInterface.ORIENTATION_NORMAL
             )
-            val exifDegree = exifOrientationToDegrees(exifOrientation)
-            imageView.setImageBitmap(rotate(bitmap, exifDegree.toFloat()))
+            var exifDegree = exifOrientationToDegrees(exifOrientation)
+            if (isFront) {
+                val matrix = Matrix()
+                matrix.preScale(-1f, 1f)
+                bitmap =
+                    Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, false)
+                exifDegree = 360 - exifDegree
+            }
+            img.setImageBitmap(rotate(bitmap, exifDegree.toFloat()))
+
+
         }
     }
 
