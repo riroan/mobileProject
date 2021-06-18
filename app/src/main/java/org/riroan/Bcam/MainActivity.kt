@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.icu.text.SimpleDateFormat
 import android.net.Uri
 import android.os.Bundle
@@ -15,6 +16,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.OrientationEventListener
 import android.view.Surface
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
@@ -24,10 +26,13 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_main.filter_button
+import kotlinx.android.synthetic.main.activity_second.*
 import org.opencv.android.OpenCVLoader
 import org.riroan.Bcam.databinding.ActivityMainBinding
 import org.riroan.Bcam.filter.*
 import org.riroan.Bcam.utils.CameraXViewModel
+import org.riroan.Bcam.utils.FilterMenuFragment
 import java.io.File
 import java.util.*
 
@@ -48,10 +53,13 @@ class MainActivity : AppCompatActivity() {
     private var filterMode = FilterMode.EYE
     private var needUpdateGraphicOverlayImageSourceInfo = false
     private var lensFacing = CameraSelector.LENS_FACING_FRONT
-
-    private val frameStartMs = SystemClock.elapsedRealtime()
+    private lateinit var second_intent: Intent
 
     var size = Size(480, 640)
+    var filePath: String = ""
+
+    //필터메뉴
+    val bottomDialogFragment = FilterMenuFragment()
 
     init {
         if (!OpenCVLoader.initDebug()) Log.d(
@@ -77,9 +85,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
-        setContentView(binding.root)
+        second_intent = Intent(this, SecondActivity::class.java)
         previewView = binding.viewFinder
         graphicOverlay = binding.graphicOverlay
+
+        setContentView(binding.root)
 
         ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(application))
             .get(CameraXViewModel::class.java)
@@ -101,7 +111,22 @@ class MainActivity : AppCompatActivity() {
             cameraProvider!!.unbindAll()
             bindPreviewUseCase()
             bindAnalysisUseCase()
+            bindCaptureUseCase()
         }
+    }
+
+    private fun bindCaptureUseCase() {
+        if (cameraProvider == null) {
+            return
+        }
+        if (imageCapture == null) {
+            cameraProvider!!.unbind(imageCapture)
+        }
+        imageCapture = ImageCapture.Builder()
+            .setTargetResolution(size)
+            .build()
+
+        cameraProvider!!.bindToLifecycle(this, cameraSelector, imageCapture)
     }
 
     private fun bindAnalysisUseCase() {
@@ -149,9 +174,13 @@ class MainActivity : AppCompatActivity() {
                 needUpdateGraphicOverlayImageSourceInfo = false
             }
             imageProcessor!!.processImageProxy(imageProxy, graphicOverlay)
-            println("Elapsed time : ${SystemClock.elapsedRealtime() - frameStartMs}")
         })
         cameraProvider!!.bindToLifecycle(this, cameraSelector, imageAnalysis)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
     }
 
     // 전면 후면 카메라 바꾸는 코드
@@ -185,8 +214,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Set up the listener for take photo button
-        camera_capture_button.setOnClickListener { takePhoto() }
-        registerForContextMenu(option_button)
+        camera_capture_button.setOnClickListener {
+            takePhoto()
+        }
 
         album_button.setOnClickListener {
             val intent = Intent(this, FileManagerActivity::class.java)
@@ -194,32 +224,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         //필터버튼
-//        filter_button.setOnClickListener {
-//
-//        }
-
+        filter_button.setOnClickListener {
+            bottomDialogFragment.show(supportFragmentManager, bottomDialogFragment.tag)
+        }
 
 
 //        화면 뒤집기 버튼
         flip_button.setOnClickListener {
-            if (cameraProvider == null) {
-                return@setOnClickListener
-            }
-            val newLensFacing = if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
-                CameraSelector.LENS_FACING_BACK
-            } else {
-                CameraSelector.LENS_FACING_FRONT
-            }
-            val newCameraSelector =
-                CameraSelector.Builder().requireLensFacing(newLensFacing).build()
-
-            if (cameraProvider!!.hasCamera(newCameraSelector)) {
-                Log.d(TAG, "Set facing to $newLensFacing")
-                lensFacing = newLensFacing
-                cameraSelector = newCameraSelector
-                bindAllCameraUseCases()
-                return@setOnClickListener
-            }
+            changeLensFacing()
         }
 
         outputDirectory = getOutputDirectory()
@@ -229,34 +241,9 @@ class MainActivity : AppCompatActivity() {
             .setTargetResolution(size)
             .build()
             .also {
-                it.setSurfaceProvider(viewFinder.surfaceProvider)
+                it.setSurfaceProvider(previewView.surfaceProvider)
             }
         cameraProvider!!.bindToLifecycle(this, cameraSelector, preview)
-    }
-
-    //더보기버튼
-    override fun onCreateContextMenu(
-        menu: ContextMenu?,
-        v: View?,
-        menuInfo: ContextMenu.ContextMenuInfo?
-    ) {
-        super.onCreateContextMenu(menu, v, menuInfo)
-        menuInflater.inflate(R.menu.menu, menu)
-    }
-
-    override fun onContextItemSelected(item: MenuItem): Boolean {
-        when (item?.itemId) {
-            R.id.menu1 -> {//16:9
-
-            }
-            R.id.menu2 -> {//4:3
-
-            }
-            R.id.menu3 -> {//1:1
-
-            }
-        }
-        return super.onContextItemSelected(item)
     }
 
 
@@ -274,10 +261,10 @@ class MainActivity : AppCompatActivity() {
                 FILENAME_FORMAT, Locale.KOREA
             ).format(System.currentTimeMillis()) + ".jpg"
         )
+        filePath = photoFile.path
 
         // Create output options object which contains file + metadata
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
         // Set up image capture listener, which is triggered after photo has
         // been taken
         imageCapture.takePicture(
@@ -289,10 +276,13 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val savedUri = Uri.fromFile(photoFile)
+                    val savedUri = Uri.fromFile(photoFile).toString()
                     val msg = "Photo capture succeeded: $savedUri"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
+
+                    second_intent.putExtra("imagePath", savedUri)
+                    startActivity(second_intent)
                 }
             })
     }
@@ -328,12 +318,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-
-    private fun setImageCapture(): ImageCapture {
-        return ImageCapture.Builder()
-            .build()
-    }
-
     private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
         ContextCompat.checkSelfPermission(
             baseContext, it
@@ -357,7 +341,12 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "CameraXBasic"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val PERMISSION_REQUESTS = 1
-        private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE)
+        private val REQUIRED_PERMISSIONS = arrayOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        )
+        private const val PAGE_COUNT = 4
 
         enum class FilterMode {
             NO, SOBEL, CHEEK, SEGMENT, EYE

@@ -56,17 +56,6 @@
         app:srcCompat="@drawable/ic_baseline_photo_24" />
 
     <ImageView
-        android:id="@+id/option_button"
-        app:tint="#FFFFFF"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_marginStart="32dp"
-        android:layout_marginTop="16dp"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_baseline_more_vert_24" />
-
-    <ImageView
         android:id="@+id/flip_button"
         android:layout_width="50dp"
         android:layout_height="50dp"

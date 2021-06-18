@@ -37,7 +37,6 @@ class FileManagerActivity : AppCompatActivity() {
                 null,
                 MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC"
             )
-            println("123")
             if (cursor != null) { // 필터링
                 while (cursor.moveToNext()) {
 //                for (i in 1..10) {
@@ -69,15 +68,11 @@ class FileManagerActivity : AppCompatActivity() {
                     }*/
 //                    "/storage/emulated/0/Android/data/org.riroan.Bcam" 이걸로 바꿔야됨
 
-                    var bitmap = BitmapFactory.decodeFile(uri)
-                    if (bitmap == null){
-                        continue
-                    }
-                    data.add(ItemData(uri.toUri(), bitmap))
+                    var bitmap: Bitmap? = BitmapFactory.decodeFile(uri) ?: continue
+                    data.add(ItemData(uri.toUri(), bitmap!!))
                 }
                 cursor.close()
             }
-
 
             adapter = FileManagerAdapter(data)
             adapter.itemClickListener = object : FileManagerAdapter.OnItemClickListener {
