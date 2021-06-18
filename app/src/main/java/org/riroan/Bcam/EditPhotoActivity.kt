@@ -29,7 +29,7 @@ class EditPhotoActivity : AppCompatActivity() {
 
             editPhotoDeleteBtn.setOnClickListener {
                 val file = File(uri)
-                imageView.setColorFilter(Color.WHITE)
+                //imageView.setColorFilter(Color.WHITE)
                 if (file.exists()) { // test
                     if (file.delete()) {
                         println("test success")
