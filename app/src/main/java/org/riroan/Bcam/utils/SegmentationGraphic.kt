@@ -7,7 +7,11 @@ import org.riroan.Bcam.GraphicOverlay
 import org.riroan.Bcam.R
 import java.nio.ByteBuffer
 
-class SegmentationGraphic(overlay: GraphicOverlay, segmentationMask: SegmentationMask) :
+class SegmentationGraphic(
+    overlay: GraphicOverlay,
+    segmentationMask: SegmentationMask,
+    val source: Int
+) :
     GraphicOverlay.Graphic(overlay) {
     private val mask: ByteBuffer
     private val maskWidth: Int
@@ -40,7 +44,7 @@ class SegmentationGraphic(overlay: GraphicOverlay, segmentationMask: Segmentatio
             IntArray(maskWidth * maskHeight)
         val context = applicationContext
         var bitmap =
-            BitmapFactory.decodeResource(context.resources, R.raw.back1)
+            BitmapFactory.decodeResource(context.resources, source)
         println("$maskWidth, $maskHeight")
         bitmap = Bitmap.createScaledBitmap(bitmap, maskWidth, maskHeight, false)
 

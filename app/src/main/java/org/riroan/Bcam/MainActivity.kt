@@ -13,7 +13,6 @@ import android.util.Log
 import android.util.Size
 import android.view.View
 import android.widget.Toast
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -45,10 +44,8 @@ class MainActivity : AppCompatActivity() {
     private var preview: Preview? = null
     private var imageCapture: ImageCapture? = null
     private var imageAnalysis: ImageAnalysis? = null
-    private var imageProcessor: BaseAnalyzer? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    private var filterMode = FilterMode.EYE
     private var needUpdateGraphicOverlayImageSourceInfo = false
     private var lensFacing = CameraSelector.LENS_FACING_FRONT
     private lateinit var second_intent: Intent
@@ -84,7 +81,6 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         cameraSelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
         second_intent = Intent(this, SecondActivity::class.java)
-        previewView = binding.viewFinder
         graphicOverlay = binding.graphicOverlay
 
         setContentView(binding.root)
@@ -136,16 +132,8 @@ class MainActivity : AppCompatActivity() {
         if (imageAnalysis == null) {
             cameraProvider!!.unbind(imageAnalysis)
         }
-        imageProcessor = when (filterMode) {
-            FilterMode.NO -> NoAnalyzer()
-            FilterMode.SOBEL -> EdgeAnalyzer()
-            FilterMode.CHEEK -> CheekImageAnalyzer(R.raw.star)
-            FilterMode.SEGMENT -> SegmentationAnalyzer()
-            FilterMode.EYE -> EyeImageAnalyzer(R.raw.eye1)
-        }
 
         imageAnalysis = ImageAnalysis.Builder()
-            //.setTargetAspectRatio(AspectRatio.RATIO_16_9)
             .setTargetResolution(size)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
@@ -176,11 +164,6 @@ class MainActivity : AppCompatActivity() {
             imageProcessor!!.processImageProxy(imageProxy, graphicOverlay)
         })
         cameraProvider!!.bindToLifecycle(this, cameraSelector, imageAnalysis)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
     }
 
     // 전면 후면 카메라 바꾸는 코드
@@ -216,9 +199,6 @@ class MainActivity : AppCompatActivity() {
         // Set up the listener for take photo button
         camera_capture_button.setOnClickListener {
             takePhoto()
-            val intent = Intent(this, SecondActivity::class.java)
-            intent.putExtra("imagePath", filePath)
-            startActivity(intent)
         }
 
         album_button.setOnClickListener {
@@ -240,20 +220,16 @@ class MainActivity : AppCompatActivity() {
         outputDirectory = getOutputDirectory()
 
         preview = Preview.Builder()
-            //.setTargetAspectRatio(AspectRatio.RATIO_16_9)
             .setTargetResolution(size)
             .build()
             .also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
+                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
             }
         cameraProvider!!.bindToLifecycle(this, cameraSelector, preview)
     }
 
 
     private fun takePhoto() {
-        // Get a stable reference of the modifiable image capture use case
-        // null일경우 리턴
-        // 아닌경우 사진 찍은 경우
         val imageCapture = imageCapture ?: return
 
         // Create time-stamped output file to hold the image
@@ -285,6 +261,12 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, msg)
 
                     second_intent.putExtra("imagePath", filePath)
+                    val f = File(filePath)
+                    if (f.exists()) {
+                        println("$filePath 존재")
+                    } else {
+                        println("$filePath 미존재")
+                    }
                     if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
                         second_intent.putExtra("isFront", true)
                     } else {
@@ -294,7 +276,6 @@ class MainActivity : AppCompatActivity() {
                 }
             })
     }
-
 
 
     private val requiredPermissions: Array<String?>
@@ -348,6 +329,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
+        var imageProcessor: BaseAnalyzer = NoAnalyzer()
         private const val TAG = "CameraXBasic"
         private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
         private const val PERMISSION_REQUESTS = 1
@@ -356,11 +338,6 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE
         )
-        private const val PAGE_COUNT = 4
-
-        enum class FilterMode {
-            NO, SOBEL, CHEEK, SEGMENT, EYE
-        }
 
         private fun isPermissionGranted(
             context: Context,

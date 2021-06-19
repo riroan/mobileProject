@@ -35,9 +35,6 @@ class CheekImageAnalyzer(source:Int) :
                     graphicOverlay.add(CameraImageGraphic(graphicOverlay, bitmap!!))
 
                     for (face in faces) {
-                        // 얼굴에 점같은거 표시
-                        graphicOverlay.add(FaceGraphic(graphicOverlay, face))
-
                         // 카메라상에서는 좌우 반전이기때문에 왼쪽이 오른쪽으로 나옴
                         val rightCheek = face.getLandmark(FaceLandmark.LEFT_CHEEK)
                         val leftCheek = face.getLandmark(FaceLandmark.RIGHT_CHEEK)

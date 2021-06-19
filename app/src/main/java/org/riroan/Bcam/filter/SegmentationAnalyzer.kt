@@ -7,7 +7,7 @@ import com.google.mlkit.vision.segmentation.Segmentation
 import org.riroan.Bcam.GraphicOverlay
 import org.riroan.Bcam.utils.SegmentationGraphic
 
-class SegmentationAnalyzer : MLBaseAnalyzer() {
+class SegmentationAnalyzer(val source: Int) : MLBaseAnalyzer() {
 
     @SuppressLint("UnsafeOptInUsageError")
     override fun processImageProxy(imageProxy: ImageProxy, graphicOverlay: GraphicOverlay) {
@@ -19,7 +19,7 @@ class SegmentationAnalyzer : MLBaseAnalyzer() {
             segmenter.process(image)
                 .addOnSuccessListener { segmentationMask ->
                     graphicOverlay.clear()
-                    graphicOverlay.add(SegmentationGraphic(graphicOverlay, segmentationMask))
+                    graphicOverlay.add(SegmentationGraphic(graphicOverlay, segmentationMask, source))
                     graphicOverlay.postInvalidate()
                 }
                 .addOnFailureListener { e ->
