@@ -15,7 +15,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Bcam">
-        <activity android:name=".MainActivity"
+        <activity android:name=".FileManagerActivity"></activity>
+        <activity android:name=".EditPhotoActivity" />
+        <activity android:name=".SecondActivity" />
+
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="face" />
+
+        <activity
+            android:name=".MainActivity"
             android:theme="@style/FullScreenTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -23,6 +32,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
     </application>
 
 </manifest>

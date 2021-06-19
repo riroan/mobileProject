@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "750072290308",
+    "project_id": "bcam-385d6",
+    "storage_bucket": "bcam-385d6.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:750072290308:android:9502d753c2bd506c7f2951",
+        "android_client_info": {
+          "package_name": "org.riroan.Bcam"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "750072290308-lfvns6kf9a6b4qqqfhtlt47inddgn7me.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfZyHt5cKdKHrLaiOCubTWkmRVYeQwXOc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "750072290308-lfvns6kf9a6b4qqqfhtlt47inddgn7me.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
