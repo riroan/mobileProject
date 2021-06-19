@@ -1,11 +1,8 @@
 package org.riroan.Bcam
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.os.Bundle
-import android.provider.MediaStore
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
@@ -15,8 +12,8 @@ import java.io.File
 
 
 class FileManagerActivity : AppCompatActivity() {
-    lateinit var binding: ActivityFileManagerBinding
-    var data: ArrayList<ItemData> = ArrayList()
+    lateinit var binding : ActivityFileManagerBinding
+    var data:ArrayList<ItemData> = ArrayList()
     lateinit var adapter: FileManagerAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,86 +23,42 @@ class FileManagerActivity : AppCompatActivity() {
         init()
     }
 
+    override fun onResume() {
+        super.onResume()
+        initRecyclerView()
+    }
+
     private fun initRecyclerView() {
         binding.apply {
+            data.clear()
             fileManagerRecyclerview.layoutManager = GridLayoutManager(parent, 3)
 
-            val cursor = contentResolver.query( // 기기의 모든 사진 가져옴
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                null,
-                null,
-                null,
-                MediaStore.Images.ImageColumns.DATE_TAKEN + " DESC"
-            )
-            if (cursor != null) { // 필터링
-                while (cursor.moveToNext()) {
-//                for (i in 1..10) {
-//                    cursor.moveToNext()
-
-                    var uri =
-                        cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
-                    var dir = uri.split("/")
-                    println("uri $uri")
-
-//                    for (elem in dir) { // test
-//                        println(elem)
-//                    }
-
-                    /*if (dir[1] != "storage") {
-                        continue
-                    }
-                    if (dir[2] != "emulated") {
-                        continue
-                    }
-                    if (dir[3] != "0") {
-                        continue
-                    }
-                    if (dir[4] != "DCIM") {
-                        continue
-                    }
-                    if (dir[5] != "Screenshots") {
-                        continue
-                    }*/
-//                    "/storage/emulated/0/Android/data/org.riroan.Bcam" 이걸로 바꿔야됨
-
-                    var bitmap: Bitmap? = BitmapFactory.decodeFile(uri) ?: continue
-                    data.add(ItemData(uri.toUri(), bitmap!!))
-                }
-                cursor.close()
+//            var path = File("/storage/emulated/0/DCIM/Screenshots") // test
+            var path = File("/storage/emulated/0/Android/media/org.riroan.Bcam/Bcam")
+            val listAllFiles = path.listFiles()
+            for(uri in listAllFiles) {
+                var bitmap = BitmapFactory.decodeFile(uri.toString())
+                data.add(ItemData(uri.toString().toUri(), bitmap))
             }
 
             adapter = FileManagerAdapter(data)
-            adapter.itemClickListener = object : FileManagerAdapter.OnItemClickListener {
+            adapter.itemClickListener = object : FileManagerAdapter.OnItemClickListener{
                 override fun onItemClick(
                     holder: FileManagerAdapter.ViewHolder,
                     view: View,
                     data: ItemData,
                     position: Int
                 ) {
-                    //holder.thumbnail_imageView.setColorFilter(Color.WHITE)
-//                    adapter.itemsData[position].uri = "".toUri()
-                    //adapter.itemsData[position].bitmap = null
                     val intent = Intent(view.context, EditPhotoActivity::class.java)
                     intent.putExtra("uri", adapter.itemsData[position].uri.toString())
                     startActivity(intent)
                 }
             }
-//            adapter.itemLongClickListener = object  : FileManagerAdapter.OnItemLongClickListener{
-//                override fun OnItemLongClick(
-//                    holder: FileManagerAdapter.ViewHolder,
-//                    view: View,
-//                    data: ItemData,
-//                    position: Int
-//                ) {
-//                    // 꾹누른 후 화면
-//                }
-//            }
             fileManagerRecyclerview.adapter = adapter
         }
     }
 
     private fun init() {
-        initRecyclerView()
         binding.apply {
             fileManagerCloseBtn.setOnClickListener {
                 super.onBackPressed()

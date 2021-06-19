@@ -46,7 +46,7 @@ class EyeImageAnalyzer(source: Int) :
 
                             val leftEyeSize = getPoint(leftEyeContour, graphicOverlay)
                             println(leftEyeSize)
-                            if (leftEyeSize > 67) {
+                            if (leftEyeSize > 30) {
                                 graphicOverlay.add(
                                     ImageGraphic(
                                         graphicOverlay,
@@ -62,7 +62,7 @@ class EyeImageAnalyzer(source: Int) :
 
                         if (rightEyeContour != null) {
                             val rightEyeSize = getPoint(rightEyeContour, graphicOverlay)
-                            if (rightEyeSize > 67) {
+                            if (rightEyeSize > 30) {
                                 graphicOverlay.add(
                                     ImageGraphic(
                                         graphicOverlay,

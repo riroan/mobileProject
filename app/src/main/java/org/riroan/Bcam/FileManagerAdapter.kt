@@ -10,12 +10,7 @@ class FileManagerAdapter (val itemsData: ArrayList<ItemData>) : RecyclerView.Ada
     interface OnItemClickListener{
         fun onItemClick(holder: ViewHolder, view: View, data: ItemData, position: Int)
     }
-    //        interface OnItemLongClickListener{
-//            fun OnItemLongClick(holder: ViewHolder, view: View, data: ItemData, position: Int)
-//        }
     var itemClickListener:OnItemClickListener?=null
-//        var itemLongClickListener: AdapterView.OnItemLongClickListener?=null
-
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView){
         val thumbnail_imageView: ImageView = itemView.findViewById(R.id.thumbnail_imageView)
 
@@ -23,9 +18,6 @@ class FileManagerAdapter (val itemsData: ArrayList<ItemData>) : RecyclerView.Ada
             itemView.setOnClickListener{
                 itemClickListener?.onItemClick(this, it, itemsData[adapterPosition], adapterPosition)
             }
-//                itemView.setOnLongClickListener {
-//                    itemLongClickListener?.OnItemLongClick(this, it, itemsData[adapterPosition], adapterPosition)
-//                }
         }
     }
 
