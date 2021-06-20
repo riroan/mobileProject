@@ -6,5 +6,5 @@
 
 필터를 탑재한 카메라 어플
 
-<img src="1.png">
-<img src="2.png">
+<img src="1.PNG">
+<img src="2.PNG">
